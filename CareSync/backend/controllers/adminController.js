@@ -3,7 +3,8 @@ import appointmentModel from "../models/appointmentModel.js";
 import doctorModel from "../models/doctorModel.js";
 import bcrypt from "bcrypt";
 import validator from "validator";
-import { v2 as cloudinary } from "cloudinary";
+import { cloudinary } from "../config/cloudinary.js";
+import streamifier from "streamifier"
 import userModel from "../models/userModel.js";
 
 // ================== ADMIN LOGIN ==================
@@ -59,9 +60,24 @@ const appointmentCancel = async (req, res) => {
   }
 };
 
-// ================== ADD DOCTOR ==================
+// helper function for stream upload
+const streamUpload = (buffer) => {
+  return new Promise((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(
+      { folder: "doctors" },
+      (error, result) => {
+        if (result) resolve(result);
+        else reject(error);
+      }
+    );
+    streamifier.createReadStream(buffer).pipe(stream);
+  });
+};
+
 const addDoctor = async (req, res) => {
   try {
+    console.log("Configured Cloud:", cloudinary.config().cloud_name);
+
     const {
       name,
       email,
@@ -108,16 +124,13 @@ const addDoctor = async (req, res) => {
 
     // ================== HASH PASSWORD ==================
     const hashedPassword = await bcrypt.hash(password, 10);
-    
-   console.log("Cloud Name:", process.env.CLOUDINARY_NAME);
-console.log("API Key:", process.env.CLOUDINARY_API_KEY);
-console.log("API Secret:", process.env.CLOUDINARY_API_SECRET);
-    // ================== CLOUDINARY UPLOAD ==================
-    const result = await cloudinary.uploader.upload(req.file.path, {
-      resource_type: "image",
-    });
 
-    console.log(result);
+    // ================== CLOUDINARY UPLOAD (FIXED) ==================
+    const result = await streamUpload(imageFile.buffer);
+
+    const imageUrl = result.secure_url;
+
+    console.log("Uploaded Image URL:", imageUrl);
 
     // ================== CREATE DOCTOR ==================
     const doctorData = {
@@ -145,6 +158,7 @@ console.log("API Secret:", process.env.CLOUDINARY_API_SECRET);
     res.json({ success: false, message: error.message });
   }
 };
+
 
 // ================== GET ALL DOCTORS ==================
 const allDoctors = async (req, res) => {

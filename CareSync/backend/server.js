@@ -1,13 +1,18 @@
-import 'dotenv/config'
+import dotenv from "dotenv";
+dotenv.config();
 import express from "express";
 import cors from 'cors'
 import connectDB from "./config/mongodb.js"
-import connectCloudinary from "./config/cloudinary.js"
+import { connectCloudinary } from "./config/cloudinary.js";
 import userRouter from "./routes/userRoute.js"
 import doctorRouter from "./routes/doctorRoute.js"
 import adminRouter from "./routes/adminRoute.js"
 
+
 // app config
+console.log("ENV TEST:", process.env.CLOUDINARY_CLOUD_NAME);
+console.log("EMAIL_USER:", process.env.EMAIL_USER);
+console.log("EMAIL_PASS:", process.env.EMAIL_PASS);
 const app = express()
 const port = process.env.PORT || 4000
 connectDB()
@@ -35,7 +40,6 @@ app.use(cors({
 
 // Body parser
 app.use(express.json());
-
 
 // api endpoints
 app.use("/api/user", userRouter)

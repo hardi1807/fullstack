@@ -7,6 +7,7 @@ import appointmentModel from "../models/appointmentModel.js";
 import { v2 as cloudinary } from "cloudinary";
 import stripe from "stripe";
 import razorpay from "razorpay";
+import transporter from "../config/mail.js";
 
 // Gateway Initialize
 const stripeInstance = process.env.STRIPE_SECRET_KEY
@@ -26,12 +27,19 @@ const registerUser = async (req, res) => {
   try {
     const { name, email, password } = req.body;
 
-    // checking for all data to register user
+    const existingUser = await userModel.findOne({ email });
+
+    if (existingUser) {
+      return res.json({
+        success: false,
+        message: "Email already registered",
+      });
+    }
+
     if (!name || !email || !password) {
       return res.json({ success: false, message: "Missing Details" });
     }
 
-    // validating email format
     if (!validator.isEmail(email)) {
       return res.json({
         success: false,
@@ -39,7 +47,6 @@ const registerUser = async (req, res) => {
       });
     }
 
-    // validating strong password
     if (password.length < 8) {
       return res.json({
         success: false,
@@ -47,21 +54,38 @@ const registerUser = async (req, res) => {
       });
     }
 
-    // hashing user password
-    const salt = await bcrypt.genSalt(10); // the more no. round the more time it will take
+    const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
+
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
     const userData = {
       name,
       email,
       password: hashedPassword,
+      otp,
+      otpExpiry: Date.now() + 5 * 60 * 1000,
+      isVerified: false,
     };
 
     const newUser = new userModel(userData);
     const user = await newUser.save();
+
+    // 🔥 SEND OTP EMAIL (ADDED ONLY)
+    await transporter.sendMail({
+      from: process.env.EMAIL_USER,
+      to: email,
+      subject: "CareSync Signup OTP",
+      text: `Your OTP is ${otp}`,
+    });
+
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET);
 
-    res.json({ success: true, token });
+    res.json({
+      success: true,
+      token,
+      message: "OTP sent to email",
+    });
   } catch (error) {
     console.log(error);
     res.json({ success: false, message: error.message });
@@ -80,14 +104,59 @@ const loginUser = async (req, res) => {
 
     const isMatch = await bcrypt.compare(password, user.password);
 
-    if (isMatch) {
-      const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET);
-      res.json({ success: true, token });
-    } else {
-      res.json({ success: false, message: "Invalid credentials" });
+    if (!isMatch) {
+      return res.json({ success: false, message: "Invalid credentials" });
     }
+
+    // 🔥 GENERATE OTP (ADDED ONLY)
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+    user.otp = otp;
+    user.otpExpiry = Date.now() + 5 * 60 * 1000;
+    await user.save();
+
+    // 🔥 SEND OTP EMAIL
+    await transporter.sendMail({
+      from: process.env.EMAIL_USER,
+      to: email,
+      subject: "Login OTP - CareSync",
+      text: `Your OTP is ${otp}`,
+    });
+
+    res.json({
+      success: true,
+      message: "OTP sent to email",
+      email,
+    });
   } catch (error) {
     console.log(error);
+    res.json({ success: false, message: error.message });
+  }
+};
+
+//verify otp
+const verifyLoginOtp = async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+
+    const user = await userModel.findOne({ email });
+
+    if (!user) {
+      return res.json({ success: false, message: "User not found" });
+    }
+
+    if (user.otp !== otp || user.otpExpiry < Date.now()) {
+      return res.json({ success: false, message: "Invalid OTP" });
+    }
+
+    user.otp = null;
+    user.otpExpiry = null;
+    await user.save();
+
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET);
+
+    res.json({ success: true, token });
+  } catch (error) {
     res.json({ success: false, message: error.message });
   }
 };
@@ -369,6 +438,7 @@ const verifyStripe = async (req, res) => {
 export {
   loginUser,
   registerUser,
+  verifyLoginOtp,
   getProfile,
   updateProfile,
   bookAppointment,
