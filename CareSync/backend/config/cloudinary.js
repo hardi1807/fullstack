@@ -11,3 +11,4 @@ const connectCloudinary = () => {
 };
 
 export { cloudinary, connectCloudinary };
+export default connectCloudinary;
