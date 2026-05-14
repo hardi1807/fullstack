@@ -165,10 +165,19 @@ const allDoctors = async (req, res) => {
   try {
     const doctors = await doctorModel.find({}).select("-password");
     res.json({ success: true, doctors });
-  } catch (error) {
-    console.log(error);
-    res.json({ success: false, message: error.message });
-  }
+ } catch (error) {
+
+  console.log("========== CLOUDINARY ERROR ==========");
+  console.log("FULL ERROR:", error);
+  console.log("MESSAGE:", error.message);
+  console.log("HTTP CODE:", error.http_code);
+  console.log("ERROR OBJECT:", error.error);
+
+  res.json({
+    success: false,
+    message: error.message
+  });
+}
 };
 
 // ================== ADMIN DASHBOARD ==================

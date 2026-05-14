@@ -5,18 +5,21 @@ import appointmentModel from "../models/appointmentModel.js";
 
 // ================= LOGIN DOCTOR =================
 const loginDoctor = async (req, res) => {
+    
     try {
         const { email, password } = req.body;
 
         const user = await doctorModel.findOne({ email });
 
         if (!user) {
+
             return res.json({ success: false, message: "Invalid credentials" });
         }
 
         const isMatch = await bcrypt.compare(password, user.password);
 
         if (!isMatch) {
+        
             return res.json({ success: false, message: "Invalid credentials" });
         }
 
@@ -136,16 +139,29 @@ const doctorProfile = async (req, res) => {
 // ================= UPDATE PROFILE =================
 const updateDoctorProfile = async (req, res) => {
   try {
+
     const docId = req.user.id;
-    const { fees, address, available } = req.body;
+
+    let { fees, address, available } = req.body;
+
+    console.log("UPDATE BODY:", req.body);
+
+    // convert string address to object if needed
+    if (typeof address === "string") {
+      address = JSON.parse(address);
+    }
 
     const updatedDoc = await doctorModel.findByIdAndUpdate(
       docId,
-      { fees, address, available },
+      {
+        fees: Number(fees),
+        address,
+        available
+      },
       { new: true }
     );
 
-    console.log("Updated Doctor:", updatedDoc);
+    console.log("UPDATED DOCTOR:", updatedDoc);
 
     res.json({
       success: true,
@@ -154,7 +170,13 @@ const updateDoctorProfile = async (req, res) => {
     });
 
   } catch (error) {
-    res.json({ success: false, message: error.message });
+
+    console.log("UPDATE ERROR:", error);
+
+    res.json({
+      success: false,
+      message: error.message
+    });
   }
 };
 

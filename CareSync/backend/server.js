@@ -10,9 +10,7 @@ import adminRouter from "./routes/adminRoute.js"
 
 
 // app config
-console.log("ENV TEST:", process.env.CLOUDINARY_CLOUD_NAME);
-console.log("EMAIL_USER:", process.env.EMAIL_USER);
-console.log("EMAIL_PASS:", process.env.EMAIL_PASS);
+
 const app = express()
 const port = process.env.PORT || 4000
 connectDB()
@@ -30,11 +28,7 @@ app.options("*", cors({
 }));
 
 app.use(express.json());
-/*app.use(express.json());
-app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:5174','http://localhost:5175', 'https://adminprescriptodr.vercel.app', 'https://prescriptoapp-wheat.vercel.app'],
-  credentials: true
-})) */
+
 
 
 

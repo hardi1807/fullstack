@@ -60,7 +60,7 @@ const Appointment = () => {
                 })
 
                 let day = currentDate.getDate()
-                let month = currentDate.getMonth() + 1
+                let month = currentDate.getMonth() + 1  
                 let year = currentDate.getFullYear()
 
                 const slotDate = `${day}_${month}_${year}`
